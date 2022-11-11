@@ -1,0 +1,8 @@
+name = "ParallelProgressMeter"
+uuid = "d45128f7-b2d1-426f-a381-e2873889fbb8"
+authors = ["Sean P. Cornelius <spcornelius@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
