@@ -49,7 +49,7 @@ from other workers
 
 """
 function ParallelProgress(progress::AbstractProgress)
-    channel = RemoteChannel(() -> Channel{NTuple{3,Any}}())
+    channel = RemoteChannel(() -> Channel{Tuple{ProgressAction, Any, Any}}())
     pp = ParallelProgress(channel)
     
     @async begin
@@ -156,7 +156,7 @@ function MultipleProgress(progresses::AbstractVector{<:AbstractProgress},
                           auto_reset_timer = true)
     !enabled && return MultipleProgress(FakeChannel(), length(progresses))
 
-    channel = RemoteChannel(() -> Channel{NTuple{4,Any}}())
+    channel = RemoteChannel(() -> Channel{Tuple{Int64, ProgressAction, Any, Any}}())
     mp = MultipleProgress(channel, length(progresses))
     @async run_multiple_progress(progresses, mainprogress, mp;
                                  auto_close=auto_close,
@@ -233,20 +233,28 @@ function run_multiple_progress(progresses::AbstractVector{<:AbstractProgress},
                 end
             else
                 # add progress
-                if f == MP_ADD_PROGRESS
+                if f ∈ (MP_ADD_PROGRESS,  MP_ADD_UNKNOWN, MP_ADD_THRESH)
                     resize!(progresses, max(length(progresses), p))
                     mp.amount = length(progresses)
-                    progresses[p] = Progress(args...; kwt..., offset=-1)
-                    continue
-                elseif f == MP_ADD_UNKNOWN
-                    resize!(progresses, max(length(progresses), p))
-                    mp.amount = length(progresses)
-                    progresses[p] = ProgressUnknown(args...; kwt..., offset=-1)
-                    continue
-                elseif f == MP_ADD_THRESH
-                    resize!(progresses, max(length(progresses), p))
-                    mp.amount = length(progresses)
-                    progresses[p] = ProgressThresh(args...; kwt..., offset=-1)
+
+                    new_progress = if f == MP_ADD_PROGRESS
+                        Progress(args...; kwt..., offset=-1)
+                    elseif f == MP_ADD_UNKNOWN
+                        ProgressUnknown(args...; kwt..., offset=-1)
+                    else f == MP_ADD_THRESH
+                        ProgressThresh(args...; kwt..., offset=-1)
+                    end
+
+                    progresses[p] = new_progress
+
+                    if isa(mainprogress, Progress)
+                        if count_finishes
+                            mainprogress.n = length(progresses)
+                        elseif isa(new_progress, Progress)
+                            mainprogress.n += progresses[p].n
+                        end
+                    end
+
                     continue
                 end
 
