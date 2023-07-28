@@ -93,7 +93,7 @@ Base.close(::FakeChannel) = nothing
 Base.isready(::FakeChannel) = false
 Distributed.put!(::FakeChannel, _...) = nothing
 
-struct MultipleChannel{T <: RemoteChannel}
+struct MultipleChannel{T}
     channel::T
     id::Int
 end
