@@ -83,6 +83,16 @@ function ParallelProgress(progress::AbstractProgress)
     return pp
 end
 
+"""
+    FakeChannel()
+
+fake RemoteChannel that doesn't put anything anywhere (for allowing overshoot)
+"""
+struct FakeChannel end
+Base.close(::FakeChannel) = nothing
+Base.isready(::FakeChannel) = false
+Distributed.put!(::FakeChannel, _...) = nothing
+
 struct MultipleChannel{T <: RemoteChannel}
     channel::T
     id::Int
